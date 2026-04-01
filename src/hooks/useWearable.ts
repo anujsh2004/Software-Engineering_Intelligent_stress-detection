@@ -17,6 +17,8 @@ export type AlertEvent = {
   metrics: { hrv: number; eda: number };
 };
 
+export type SimulationMode = 'normal' | 'abnormal';
+
 const MAX_HISTORY = 20;
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
 
@@ -27,6 +29,7 @@ export function useWearable(authToken?: string | null) {
   const [alerts, setAlerts] = useState<AlertEvent[]>([]);
   const [newAlert, setNewAlert] = useState<AlertEvent | null>(null);
   const [isLoadingAlerts, setIsLoadingAlerts] = useState(false);
+  const [simulationMode, setSimulationMode] = useState<SimulationMode>('normal');
 
   // Fetch notifications from database on mount
   const fetchNotifications = useCallback(async () => {
@@ -102,6 +105,12 @@ export function useWearable(authToken?: string | null) {
 
   // Separate effect for stress detection to access fresh state
   const lastAlertTimeRef = useRef(0);
+  const simulationModeRef = useRef<SimulationMode>(simulationMode);
+  
+  // Keep ref in sync with state
+  useEffect(() => {
+    simulationModeRef.current = simulationMode;
+  }, [simulationMode]);
   
   // Data simulation effect
   useEffect(() => {
@@ -111,20 +120,22 @@ export function useWearable(authToken?: string | null) {
       const now = new Date();
       const timeString = now.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-      const isStressSimulation = Math.random() < 0.20;
+      const currentSimMode = simulationModeRef.current;
+      let newHrv: number, newEda: number;
 
-      let newHrv, newEda;
-
-      if (isStressSimulation) {
-        newHrv = 30 + Math.random() * 15; 
-        newEda = 8.1 + Math.random() * 1.9;   
+      if (currentSimMode === 'abnormal') {
+        // Abnormal/Stress mode: Low HRV (25-40ms), High EDA (9-12µS)
+        // These values simulate high physiological stress
+        newHrv = 25 + Math.random() * 15;  // 25-40ms (very low HRV = stress)
+        newEda = 9 + Math.random() * 3;    // 9-12µS (very high EDA = stress)
       } else {
-        newHrv = 55 + Math.random() * 35;
-        newEda = 1 + Math.random() * 5;
+        // Normal mode: Healthy HRV (60-95ms), Normal EDA (1-4µS)
+        newHrv = 60 + Math.random() * 35;  // 60-95ms (healthy HRV)
+        newEda = 1 + Math.random() * 3;    // 1-4µS (relaxed EDA)
       }
       
-      newHrv = Math.max(30, Math.min(100, newHrv));
-      newEda = Math.max(1, Math.min(12, newEda));
+      newHrv = Math.max(20, Math.min(100, newHrv));
+      newEda = Math.max(1, Math.min(15, newEda));
 
       const newDataPoint = {
         timestamp: timeString,
@@ -140,12 +151,17 @@ export function useWearable(authToken?: string | null) {
         return newHistory;
       });
 
+      // Calculate heart rate from HRV (lower HRV = higher heart rate during stress)
       const simulatedHeartRate = Math.round(140 - (newDataPoint.hrv * 0.6));
       
       const currentTime = Date.now();
       if (currentTime - lastAlertTimeRef.current > 5000) {
 
-          console.log("[ML Server Request] Sending:", { heartRate: simulatedHeartRate, eda: newDataPoint.eda });
+          console.log("[ML Server Request] Sending:", { 
+            heartRate: simulatedHeartRate, 
+            eda: newDataPoint.eda,
+            simulationMode: currentSimMode 
+          });
 
           fetch('http://127.0.0.1:5001/predict', {
             method: 'POST',
@@ -160,7 +176,7 @@ export function useWearable(authToken?: string | null) {
             console.log(`[ML Server Response] Data:`, data);
             
             if (data && data.stressLevel) {
-                if (data.stressLevel === "HIGH" || data.stressLevel === "MILD" || (data.stressLevel === "NORMAL" && Math.random() < 0.30)) {
+                if (data.stressLevel === "HIGH" || data.stressLevel === "MILD") {
                    triggerAlert(newDataPoint, data.stressLevel);
                 }
             }
@@ -240,6 +256,8 @@ export function useWearable(authToken?: string | null) {
     setNewAlert,
     isLoadingAlerts,
     clearAllNotifications,
-    refreshNotifications: fetchNotifications
+    refreshNotifications: fetchNotifications,
+    simulationMode,
+    setSimulationMode
   };
 }

@@ -22,7 +22,7 @@ export default function Home() {
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'log' | 'history' | 'settings'>('dashboard');
 
-  const { isConnected, dataHistory, currentMetrics, alerts, newAlert, setNewAlert, clearAllNotifications } = useWearable(authToken);
+  const { isConnected, dataHistory, currentMetrics, alerts, newAlert, setNewAlert, clearAllNotifications, simulationMode, setSimulationMode } = useWearable(authToken);
 
   // Check for existing token on mount
   useEffect(() => {
@@ -194,7 +194,12 @@ export default function Home() {
                 <h2 className="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
                 <p className="text-gray-500">Welcome, {loggedInUser?.name || "Student"}! Real-time monitoring of your physiological stress markers.</p>
               </div>
-              <Dashboard dataHistory={dataHistory} currentMetrics={currentMetrics} />
+              <Dashboard 
+                dataHistory={dataHistory} 
+                currentMetrics={currentMetrics} 
+                simulationMode={simulationMode}
+                onSimulationModeChange={setSimulationMode}
+              />
             </div>
           )}
 

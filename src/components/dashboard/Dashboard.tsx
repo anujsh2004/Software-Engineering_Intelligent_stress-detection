@@ -2,18 +2,72 @@
 
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { Activity, Droplets, Zap } from 'lucide-react';
+import { Activity, Droplets, Zap, AlertTriangle, CheckCircle } from 'lucide-react';
 import { MetricCard } from './MetricCard';
-import { MetricData } from '@/hooks/useWearable';
+import { MetricData, SimulationMode } from '@/hooks/useWearable';
 
 type DashboardProps = {
   dataHistory: MetricData[];
   currentMetrics: { hrv: number; eda: number };
+  simulationMode: SimulationMode;
+  onSimulationModeChange: (mode: SimulationMode) => void;
 };
 
-export function Dashboard({ dataHistory, currentMetrics }: DashboardProps) {
+export function Dashboard({ dataHistory, currentMetrics, simulationMode, onSimulationModeChange }: DashboardProps) {
+  const isAbnormal = simulationMode === 'abnormal';
+  
   return (
     <div className="space-y-6">
+      {/* Simulation Mode Toggle */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {isAbnormal ? (
+              <div className="p-2 bg-red-100 rounded-lg">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+              </div>
+            ) : (
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              </div>
+            )}
+            <div>
+              <h3 className="font-semibold text-gray-800">Data Simulation Mode</h3>
+              <p className="text-sm text-gray-500">
+                {isAbnormal 
+                  ? 'Simulating abnormal stress patterns (Low HRV, High EDA)' 
+                  : 'Simulating normal relaxed patterns (Normal HRV & EDA)'}
+              </p>
+            </div>
+          </div>
+          
+          <button
+            onClick={() => onSimulationModeChange(isAbnormal ? 'normal' : 'abnormal')}
+            className={`relative inline-flex h-10 w-48 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+              isAbnormal 
+                ? 'bg-red-500 focus:ring-red-500' 
+                : 'bg-green-500 focus:ring-green-500'
+            }`}
+          >
+            <span
+              className={`inline-flex h-8 w-22 transform items-center justify-center rounded-full bg-white text-xs font-semibold shadow-md transition-all duration-300 ${
+                isAbnormal ? 'translate-x-24' : 'translate-x-1'
+              }`}
+              style={{ width: '5.5rem' }}
+            >
+              {isAbnormal ? 'Abnormal' : 'Normal'}
+            </span>
+            <span 
+              className={`absolute text-xs font-medium text-white ${
+                isAbnormal ? 'left-3' : 'right-3'
+              }`}
+            >
+              {isAbnormal ? 'Normal' : 'Abnormal'}
+            </span>
+          </button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <MetricCard
           title="Heart Rate Variability (HRV)"
