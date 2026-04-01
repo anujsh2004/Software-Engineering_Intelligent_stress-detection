@@ -24,12 +24,35 @@ export default function Home() {
 
   const { isConnected, dataHistory, currentMetrics, alerts, newAlert, setNewAlert, clearAllNotifications, simulationMode, setSimulationMode } = useWearable(authToken);
 
-  // Check for existing token on mount
+  // Check for existing token on mount and load user profile
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
       setAuthToken(token);
-      // Optionally verify token with backend here
+      // Verify token and load user profile
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
+      fetch(`${backendUrl}/api/auth/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.user) {
+            setLoggedInUser(data.user);
+            setIsLoggedIn(true);
+          } else {
+            // Token is invalid, clear it
+            localStorage.removeItem('token');
+            setAuthToken(null);
+          }
+        })
+        .catch(() => {
+          // Network error or backend not running
+          localStorage.removeItem('token');
+          setAuthToken(null);
+        });
     }
   }, []);
 

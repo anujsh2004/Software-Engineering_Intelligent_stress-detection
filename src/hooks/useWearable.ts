@@ -31,21 +31,27 @@ export function useWearable(authToken?: string | null) {
   const [isLoadingAlerts, setIsLoadingAlerts] = useState(false);
   const [simulationMode, setSimulationMode] = useState<SimulationMode>('normal');
 
-  // Fetch notifications from database on mount
-  const fetchNotifications = useCallback(async () => {
-    if (!authToken) return;
+  // Fetch notifications from database
+  const fetchNotifications = useCallback(async (token?: string) => {
+    const tokenToUse = token || authToken;
+    if (!tokenToUse) {
+      console.log("[Notifications] No auth token, skipping fetch");
+      return;
+    }
     
+    console.log("[Notifications] Fetching notifications from database...");
     setIsLoadingAlerts(true);
     try {
       const response = await fetch(`${BACKEND_URL}/api/notifications`, {
         headers: {
-          'Authorization': `Bearer ${authToken}`,
+          'Authorization': `Bearer ${tokenToUse}`,
           'Content-Type': 'application/json'
         }
       });
       
       if (response.ok) {
         const data = await response.json();
+        console.log("[Notifications] Received from DB:", data);
         if (data.success && data.data) {
           const mappedAlerts: AlertEvent[] = data.data.map((n: any) => ({
             id: n._id,
@@ -56,21 +62,28 @@ export function useWearable(authToken?: string | null) {
             metrics: n.metrics || { hrv: 0, eda: 0 }
           }));
           setAlerts(mappedAlerts);
+          console.log("[Notifications] Loaded", mappedAlerts.length, "notifications");
         }
+      } else {
+        console.error("[Notifications] Failed to fetch:", response.status, response.statusText);
       }
     } catch (err) {
-      console.error("Failed to fetch notifications:", err);
+      console.error("[Notifications] Failed to fetch notifications:", err);
     } finally {
       setIsLoadingAlerts(false);
     }
   }, [authToken]);
 
-  // Load alerts from DB when token is available
+  // Load alerts from DB when token becomes available
   useEffect(() => {
     if (authToken) {
-      fetchNotifications();
+      console.log("[Notifications] Auth token available, fetching history...");
+      fetchNotifications(authToken);
+    } else {
+      // Clear alerts when logged out
+      setAlerts([]);
     }
-  }, [authToken, fetchNotifications]);
+  }, [authToken]);
 
   // Save notification to database
   const saveNotificationToDB = useCallback(async (alert: AlertEvent, stressLevel: string) => {

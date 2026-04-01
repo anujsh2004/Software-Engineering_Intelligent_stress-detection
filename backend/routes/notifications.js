@@ -8,6 +8,9 @@ router.post('/', protect, async (req, res) => {
   try {
     const { message, recommendation, stressLevel, metrics } = req.body;
 
+    console.log('[Notifications API] Creating notification for user:', req.user._id, req.user.name);
+    console.log('[Notifications API] Data:', { message, stressLevel, metrics });
+
     if (!message || !recommendation) {
       return res.status(400).json({
         success: false,
@@ -23,11 +26,14 @@ router.post('/', protect, async (req, res) => {
       metrics: metrics || {}
     });
 
+    console.log('[Notifications API] Created notification:', notification._id);
+
     res.status(201).json({
       success: true,
       data: notification
     });
   } catch (error) {
+    console.error('[Notifications API] Error creating:', error.message);
     res.status(500).json({
       success: false,
       error: error.message
@@ -38,9 +44,13 @@ router.post('/', protect, async (req, res) => {
 // Get all notifications for the logged-in user
 router.get('/', protect, async (req, res) => {
   try {
+    console.log('[Notifications API] Fetching for user:', req.user._id, req.user.name);
+    
     const notifications = await Notification.find({ userId: req.user._id })
       .sort({ timestamp: -1 })
       .limit(50);
+
+    console.log('[Notifications API] Found', notifications.length, 'notifications');
 
     res.json({
       success: true,
@@ -48,6 +58,7 @@ router.get('/', protect, async (req, res) => {
       data: notifications
     });
   } catch (error) {
+    console.error('[Notifications API] Error:', error.message);
     res.status(500).json({
       success: false,
       error: error.message
