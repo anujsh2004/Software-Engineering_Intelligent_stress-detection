@@ -22,6 +22,10 @@ export type SimulationMode = 'normal' | 'abnormal';
 const MAX_HISTORY = 20;
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
 
+const ML_SERVICE_URL =
+  process.env.NEXT_PUBLIC_ML_SERVICE_URL ||
+  'http://127.0.0.1:5001';
+
 export function useWearable(authToken?: string | null) {
   const [isConnected, setIsConnected] = useState(false);
   const [dataHistory, setDataHistory] = useState<MetricData[]>([]);
@@ -176,7 +180,7 @@ export function useWearable(authToken?: string | null) {
             simulationMode: currentSimMode 
           });
 
-          fetch('http://127.0.0.1:5001/predict', {
+          fetch(`${ML_SERVICE_URL}/predict`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
