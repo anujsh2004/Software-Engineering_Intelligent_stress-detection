@@ -40,6 +40,7 @@ def predict():
         return jsonify({"error": "Model not loaded on the server"}), 500
         
     data = request.json
+    print("POST /predict received", flush=True)
     
     try:
         hr = float(data.get('heartRate', 70))
